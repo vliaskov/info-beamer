@@ -30,9 +30,17 @@ LUA_LUAC    ?= luac
 endif
 
 CFLAGS  += -DVERSION='"$(VERSION)"'
-CFLAGS  += $(LUA_CFLAGS) -I/usr/include/freetype2/ -I/usr/include/ffmpeg -std=c99 -Wall
+CFLAGS  += $(LUA_CFLAGS) -g -I/usr/include/freetype2/ -I/usr/include/ffmpeg -std=c99 -Wall
+
+#LDFLAGS += -Wl,--as-needed,-rpath,/opt/vliaskov/devel/info-beamer/ -L. -L/usr/lib/x86_64-linux-gnu  -lfreetype -lfreetype-gl
+#LDFLAGS += -lfreetype -L. -L/usr/lib/x86_64-linux-gnu  -Wl,-unresolved-symbols=ignore-in-shared-libs,-rpath,/opt/vliaskov/devel/info-beamer/ -lfreetype-gl
+LDFLAGS += -L.  -Wl,-unresolved-symbols=ignore-in-shared-libs,-rpath,/opt/vliaskov/devel/info-beamer/ -lfreetype-gl -lfreetype
 LDFLAGS += $(LUA_LDFLAGS) -levent -lglfw -lGL -lGLU -lGLEW -lftgl -lIL -lILU -lavformat -lavcodec -lavutil -lswscale -lz -lm -lXi -lX11 -lXxf86vm -lXrandr -lpthread
 
+#LDFLAGS += -lfreetype -L.  -Wl,-rpath,/opt/vliaskov/devel/info-beamer/ libfreetype-gl.a
+
+#LDFLAGS += -L. -Wl,-rpath,/opt/vliaskov/devel/info-beamer/ -lfreetype-gl -lfreetype
+#-Wl,-rpath,/opt/vliaskov/devel/hw-decoding/trunk/freetype-gl
 prefix 		?= /usr/local
 exec_prefix ?= $(prefix)
 bindir 		?= $(exec_prefix)/bin
