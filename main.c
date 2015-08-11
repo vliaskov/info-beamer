@@ -1439,6 +1439,7 @@ static void tick() {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glViewport(0, 0, win_w, win_h);
+    //fprintf(stderr, "width %u height %u\n", win_w, win_h);
     glOrtho(0, win_w,
             win_h, 0,
             -1000, 1000);

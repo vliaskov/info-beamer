@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "freetype-gl.h"
+#include "mat4.h"
 
 
 #include <GL/gl.h>
@@ -26,6 +27,8 @@ typedef struct {
     texture_atlas_t *atlas;
     const char *text;
     vertex_buffer_t *buffer;
+    GLuint shader;
+    mat4   model, view, projection;
 } font_t;
 
 typedef struct {
@@ -52,7 +55,7 @@ static int font_write(lua_State *L) {
         return luaL_error(L, "invalid utf8");
 
     GLfloat size = luaL_checknumber(L, 5) / SCALE;
-    fprintf (stderr, "%s x = %g y = %g text %s size = %g\n", __func__, x, y, text, size);
+    //fprintf (stderr, "%s x = %g y = %g text %s size = %g\n", __func__, x, y, text, size);
     /*int type = lua_type(L, 6);
     if (type == LUA_TNUMBER) {
         GLfloat r = luaL_checknumber(L, 6);
@@ -80,17 +83,41 @@ static int font_write(lua_State *L) {
         return luaL_argerror(L, 6, "unsupported value. must be RGBA or texturelike");
     }*/
 
-    if (!font->buffer)
+    if (!font->buffer) {
+    fprintf (stderr, "%s NEW BUFFER %p\n", __func__, font);
         font_buffer_new (font, text);
+    }
+    else
+       vertex_buffer_clear( font->buffer );
 
 
-    glPushMatrix();
-        glTranslatef(x, y, 0);
-        glTranslatef(0, size * (SCALE * 0.8), 0);
-        glScalef(size, -size, 1.0);
+    //glPushMatrix();
+        //glTranslatef(x, y, 0);
+        //glTranslatef(0, size * (SCALE * 0.8), 0);
+        //glScalef(size, -size, 1.0);
         //ftglRenderFont(font->font, text, FTGL_RENDER_ALL);
+        //vertex_buffer_render( font->buffer, GL_TRIANGLES );
+    //glPopMatrix();
+
+    //glClearColor( 1, 1, 1, 1 );
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+    glBindTexture( GL_TEXTURE_2D, font->atlas->id );
+    glUseProgram( font->shader );
+    {
+        glUniform1i( glGetUniformLocation( font->shader, "texture" ),
+                     0 );
+        glUniformMatrix4fv( glGetUniformLocation( font->shader, "model" ),
+                            1, 0, font->model.data);
+        glUniformMatrix4fv( glGetUniformLocation( font->shader, "view" ),
+                            1, 0, font->view.data);
+        glUniformMatrix4fv( glGetUniformLocation( font->shader, "projection" ),
+                            1, 0, font->projection.data);
         vertex_buffer_render( font->buffer, GL_TRIANGLES );
-    glPopMatrix();
+    }
 
     //lua_pushnumber(L, ftglGetFontAdvance(font->font, text) * size);
     return 1;
@@ -167,6 +194,7 @@ void font_buffer_new (font_t *font, const char *text) {
 int font_new(lua_State *L, const char *path, const char *name) {
     //FTGLfont *ftgl_font = ftglCreateTextureFont(path);
     font_t newfont;
+    unsigned int width, height;
     texture_atlas_t *atlas = texture_atlas_new( 512, 512, 1 );
     newfont.atlas = atlas;
     //newfont->path = path;
@@ -190,6 +218,18 @@ int font_new(lua_State *L, const char *path, const char *name) {
     //ftglSetFontDisplayList(ftgl_font, 1);
     //ftglSetFontFaceSize(ftgl_font, SCALE, SCALE);
     //ftglSetFontCharMap(ftgl_font, ft_encoding_unicode);
+
+    newfont.shader = shader_load("shaders/v3f-t2f-c4f.vert",
+                         "shaders/v3f-t2f-c4f.frag");
+    mat4_set_identity( &newfont.projection );
+    mat4_set_identity( &newfont.model );
+    mat4_set_identity( &newfont.view );
+
+    width = 1024;
+    height = 768;
+    //glViewport(0, 0, width, height);
+    mat4_set_orthographic( &newfont.projection, 0, width, 0, height, -1, 1);
+    fprintf(stderr, "%s path %s name %s\n", __func__, path, name);
 
     font_t *font = push_font(L);
     *font = newfont;
